@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# gai: A command-line wrapper for calling Gemini (concise, CLI-focused)
+
+# Configuration
+CONFIG_FILE="gemini.conf"
+API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"  # Default
+MAX_OUTPUT_TOKENS=100  # Maximum output tokens - Keep it low for CLI
+TIMEOUT=10            # Timeout for curl requests in seconds
+
+# --- Helper Functions ---
+
+# Check API Key (robust check)
+if [ -z "$GEMINI_API_KEY" ]; then
+  echo "Error: GEMINI_API_KEY environment variable is not set." >&2
+  echo "Please set the GEMINI_API_KEY environment variable." >&2
+  exit 1
+fi
+
+if [ ${#GEMINI_API_KEY} -lt 30 ]; then
+  echo "Error: GEMINI_API_KEY appears to be invalid (too short)." >&2
+  echo "Please ensure you have set a correct API key." >&2
+  exit 1
+fi
+
+# Function to create the JSON payload for the Gemini API
+create_json_payload() {
+  local prompt="$1"
+  local max_output_tokens="$2"
+
+  jq -n \
+    --arg prompt "$prompt" \
+    --argjson maxOutputTokens "$max_output_tokens" \
+    '{
+      contents: [{
+        parts: [{text: $prompt}]
+      }],
+      generationConfig: {
+        maxOutputTokens: $maxOutputTokens
+      }
+    }'
+}
+
+# Function to call the Gemini API with loading animation and error handling
+call_gemini() {
+  local prompt="$1"
+  local max_output_tokens="$2"
+  local anim='-\|/'
+  local i=0
+  local response=""
+
+   # Start loading animation in background
+  while [[ -z "$response" ]]; do
+    printf "\r${anim:i++%${#anim}:1}"
+    sleep 0.1
+  done &
+  spinner_pid=$!
+
+  # Construct the API URL
+  local api_url="$API_ENDPOINT?key=$GEMINI_API_KEY"
+
+  # Call the API with a timeout
+  response=$(curl -s --connect-timeout $TIMEOUT -X POST "$api_url" \
+    -H "Content-Type: application/json" \
+    -d "$(create_json_payload "${prompt@Q}" "$max_output_tokens")")
+
+  curl_exit_code=$?
+
+  kill $spinner_pid 2>/dev/null
+  wait $spinner_pid 2>/dev/null
+  printf "\r"  # Clear the animation
+
+  # Check for curl errors (e.g., network issues)
+  if [ $curl_exit_code -ne 0 ]; then
+    echo "Error: curl command failed with exit code $curl_exit_code." >&2
+    echo "Possible network issue or API endpoint problem." >&2
+    return 1
+  fi
+
+  # Check for API errors
+  http_code=$(echo "$response" | jq -r '.error.code // empty')
+  if [ -n "$http_code" ]; then
+    error_message=$(echo "$response" | jq -r '.error.message // "Unknown API error"')
+    echo "Error: API returned error code $http_code: $error_message" >&2
+    echo "Please check your API key and request.  The prompt was: $prompt" >&2
+    return 1  # Indicate failure
+  fi
+
+  # Process the successful response
+  local full_response=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text // "Error: No response received."')
+
+  echo "${full_response}"
+  return 0 # Indicate success
+}
+
+# --- Main Script Logic ---
+
+# Construct the prompt.
+prompt="Ubuntu 24 CLI assistant. Provide *only* a concise, command-line-focused answer, typically a single command or a very short script.  *Never* provide explanations. Initiate your response with a 🖥️: next to the answer. $@"
+
+# Call Gemini and print the response
+call_gemini "$prompt" "$MAX_OUTPUT_TOKENS"
+
+exit 0
