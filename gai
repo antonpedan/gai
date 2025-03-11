@@ -52,7 +52,7 @@ call_gemini() {
 
   # Start loading animation in background (bold cyan) - Keep as is
   while [[ -z "$response" ]]; do
-    printf "\r\e[38;5;208m%s" "${anim:i++%${#anim}:1}"
+    printf "\r\e[38;5;208m%s\e[0m" "${anim:i++%4:1}"
     sleep 0.1
   done &
   spinner_pid=$!
@@ -90,12 +90,13 @@ call_gemini() {
   # Process the successful response
   local full_response=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text // "Error: No response received."')
 
-  # Orange and regular weight for the successful response
-  if [[ "$full_response" == "Error: No response received." ]]; then
-       echo -e "\e[31m$full_response\e[0m" # Keep error in red
-  else
-       echo -e "\e[38;5;208m${full_response}\e[0m" # Orange, regular weight
-  fi
+# Orange and regular weight for the successful response
+if [[ "$full_response" == "Error: No response received." ]]; then
+    echo -e "\e[31m$full_response\e[0m" # Keep error in red
+else
+    clean_response="${full_response//\`/}"  # Remove backticks efficiently
+    echo -e "\e[38;5;208m$clean_response\e[0m" # Orange, regular weight
+fi
 
   return 0
 }
