@@ -26,6 +26,7 @@ fi
 # Function to create the JSON payload for the Gemini API
 create_json_payload() {
   local prompt="$1"
+  local max_output_tokens="$2"
 
   jq -n \
     --arg prompt "$prompt" \
