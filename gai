@@ -104,7 +104,7 @@ fi
 # --- Main Script Logic ---
 
 # Construct the prompt.
-prompt="Ubuntu 24 CLI assistant. Provide *only* a concise, command-line-focused answer, typically a single command or a very short script.  *Never* provide explanations. Initiate your response with a 🖥️: next to the answer. $@"
+prompt="Ubuntu 24 CLI assistant. Provide *only* a concise, command-line-focused answer, typically a single command or a very short script.  *Never* provide explanations.  Do *NOT* redirect standard error to /dev/null unless I explicitly include 'suppress errors' or similar in my request. Initiate your response with a 🖥️: next to the answer. $@"
 
 # Call Gemini and print the response
 call_gemini "$prompt" "$MAX_OUTPUT_TOKENS"
