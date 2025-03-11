@@ -3,7 +3,6 @@
 # gai: A command-line wrapper for calling Gemini (concise, CLI-focused)
 
 # Configuration
-CONFIG_FILE="gemini.conf"
 API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"  # Default
 MAX_OUTPUT_TOKENS=100  # Maximum output tokens - Keep it low for CLI
 TIMEOUT=10            # Timeout for curl requests in seconds
