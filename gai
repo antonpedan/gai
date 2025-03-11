@@ -3,6 +3,7 @@
 # gai: A command-line wrapper for calling Gemini (concise, CLI-focused)
 
 # Configuration
+CONFIG_FILE="gemini.conf"
 API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"  # Default
 MAX_OUTPUT_TOKENS=100  # Maximum output tokens - Keep it low for CLI
 TIMEOUT=10            # Timeout for curl requests in seconds
@@ -11,14 +12,16 @@ TIMEOUT=10            # Timeout for curl requests in seconds
 
 # Check API Key (robust check)
 if [ -z "$GEMINI_API_KEY" ]; then
-  echo "Error: GEMINI_API_KEY environment variable is not set." >&2
-  echo "Please set the GEMINI_API_KEY environment variable." >&2
+  # Red error, yellow instructions
+  echo -e "\e[31mError: GEMINI_API_KEY environment variable is not set.\e[0m" >&2
+  echo -e "\e[33mPlease set the GEMINI_API_KEY environment variable.\e[0m" >&2
   exit 1
 fi
 
 if [ ${#GEMINI_API_KEY} -lt 30 ]; then
-  echo "Error: GEMINI_API_KEY appears to be invalid (too short)." >&2
-  echo "Please ensure you have set a correct API key." >&2
+  # Red error, yellow instructions
+  echo -e "\e[31mError: GEMINI_API_KEY appears to be invalid (too short).\e[0m" >&2
+  echo -e "\e[33mPlease ensure you have set a correct API key.\e[0m" >&2
   exit 1
 fi
 
@@ -48,9 +51,9 @@ call_gemini() {
   local i=0
   local response=""
 
-   # Start loading animation in background
+  # Start loading animation in background (bold cyan) - Keep as is
   while [[ -z "$response" ]]; do
-    printf "\r${anim:i++%${#anim}:1}"
+    printf "\r\e[1;36m${anim:i++%${#anim}:1}\e[0m"
     sleep 0.1
   done &
   spinner_pid=$!
@@ -69,27 +72,33 @@ call_gemini() {
   wait $spinner_pid 2>/dev/null
   printf "\r"  # Clear the animation
 
-  # Check for curl errors (e.g., network issues)
+  # Check for curl errors (e.g., network issues) - Keep error handling as is
   if [ $curl_exit_code -ne 0 ]; then
-    echo "Error: curl command failed with exit code $curl_exit_code." >&2
-    echo "Possible network issue or API endpoint problem." >&2
+    echo -e "\e[31mError: curl command failed with exit code $curl_exit_code.\e[0m" >&2
+    echo -e "\e[33mPossible network issue or API endpoint problem.\e[0m" >&2
     return 1
   fi
 
-  # Check for API errors
+  # Check for API errors - Keep error handling as is
   http_code=$(echo "$response" | jq -r '.error.code // empty')
   if [ -n "$http_code" ]; then
     error_message=$(echo "$response" | jq -r '.error.message // "Unknown API error"')
-    echo "Error: API returned error code $http_code: $error_message" >&2
-    echo "Please check your API key and request.  The prompt was: $prompt" >&2
-    return 1  # Indicate failure
+    echo -e "\e[31mError: API returned error code $http_code: $error_message\e[0m" >&2
+    echo -e "\e[33mPlease check your API key and request.  The prompt was: $prompt\e[0m" >&2
+    return 1
   fi
 
   # Process the successful response
   local full_response=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text // "Error: No response received."')
 
-  echo "${full_response}"
-  return 0 # Indicate success
+  # Orange and regular weight for the successful response
+  if [[ "$full_response" == "Error: No response received." ]]; then
+       echo -e "\e[31m$full_response\e[0m" # Keep error in red
+  else
+       echo -e "\e[38;5;208m${full_response}\e[0m" # Orange, regular weight
+  fi
+
+  return 0
 }
 
 # --- Main Script Logic ---
