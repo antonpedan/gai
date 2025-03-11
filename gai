@@ -3,7 +3,6 @@
 # gai: A command-line wrapper for calling Gemini (concise, CLI-focused)
 
 # Configuration
-CONFIG_FILE="gemini.conf"
 API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"  # Default
 MAX_OUTPUT_TOKENS=100  # Maximum output tokens - Keep it low for CLI
 TIMEOUT=10            # Timeout for curl requests in seconds
@@ -53,7 +52,7 @@ call_gemini() {
 
   # Start loading animation in background (bold cyan) - Keep as is
   while [[ -z "$response" ]]; do
-    printf "\r\e[1;36m${anim:i++%${#anim}:1}\e[0m"
+    printf "\r\e[38;5;208m%s" "${anim:i++%${#anim}:1}"
     sleep 0.1
   done &
   spinner_pid=$!
